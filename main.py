@@ -26,6 +26,16 @@ session = SessionLocal()
 
 templates = Jinja2Templates(directory="templates")
 
+def get_or_create(session, model, **kwargs):
+    instance = session.query(model).filter_by(**kwargs).first()
+    if instance:
+        return instance
+    else:
+        instance = model(**kwargs)
+        session.add(instance)
+        session.commit()
+        return instance
+
 
 @app.get("/")
 def read_index(request: Request, q: Union[int, None] = None):
@@ -41,43 +51,10 @@ def read_index(request: Request, q: Union[int, None] = None):
         data.append({"img": i.find('img')['src'], 'price': " ".join(i.find('div', class_='price').getText().split()),
                      'date': i.find('span', class_='date-posted').text},)
     context = {'request': request, 'data': data, 'url': url}
-    return templates.TemplateResponse('index.html', context=context)
-
-data = []
-def list_of_data():
-    for x in range(1, 94):
-        url = 'https://www.kijiji.ca/b-apartments-condos/city-of-toronto/page-{q}/c37l1700273'.format(q=x)
-        page = requests.get(url)
-        soup = BeautifulSoup(page.content, 'html.parser')
-        lists = soup.find_all('div', class_='search-item')
-        for i in lists:
-            if {"img": i.find('img')['src'],
-                         'price': " ".join(i.find('div', class_='price').getText().split()),
-                         'date': i.find('span', class_='date-posted').text} not in data:
-                data.append({"img": i.find('img')['src'],
-                             'price': " ".join(i.find('div', class_='price').getText().split()),
-                             'date': i.find('span', class_='date-posted').text}, )
-    return data
-
-
-def get_or_create(session, model, **kwargs):
-    instance = session.query(model).filter_by(**kwargs).first()
-    if instance:
-        return instance
-    else:
-        instance = model(**kwargs)
-        session.add(instance)
-        session.commit()
-        return instance
-
-
-def save_data():
-    list_of_data()
     for i in data:
         get_or_create(session, models.Record, img=i['img'], price=i['price'], date=i['date'])
-    return data
+    return templates.TemplateResponse('index.html', context=context)
 
-save_data()
 
 def get_db():
     try:
@@ -92,7 +69,6 @@ def page_view(request: Request, page_num: int = 1, page_size: int = 10, db: Sess
     start = (page_num - 1) * page_size
     end = start + page_size
     records = db.query(models.Record).all()
-    print(len(data))
     response = {
         'total': len(records),
         'count': page_size,
