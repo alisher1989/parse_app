@@ -7,3 +7,5 @@
 5) pip install --upgrade pip
 6) pip install -r req.txt
 7) uvicorn main:app --reload
+
+На главной странице выводятся данные с сайта, а на API view url ( http://localhost:8000/page_view/) выводятся данные с базы данных
